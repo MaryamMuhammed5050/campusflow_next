@@ -31,6 +31,89 @@ def check_urgency(urgency):
 
     return cleaned
 
+def check_affected_users(value):
+    if isinstance(value, bool):
+        raise ValueError("Affected users must be a positive whole number")
+
+    if isinstance(value, int):
+        number = value
+
+    elif isinstance(value, str):
+        value = value.strip()
+
+        try:
+            number = int(value)
+        except ValueError:
+            raise ValueError("Affected users must be a positive whole number")
+
+    else:
+        raise ValueError("Affected users must be a positive whole number")
+
+    if number < 1:
+        raise ValueError("Affected users must be a positive whole number")
+
+    return number
+
+def calculate_priority(urgency, affected_users):
+    if urgency == "high" and affected_users >= 10:
+        return "critical"
+
+    if urgency == "high" or affected_users >= 10:
+        return "high"
+
+    if urgency == "medium" or affected_users >= 3:
+        return "medium"
+
+    return "low"
+
+def next_id(existing_tickets):
+    highest = 0
+
+    for ticket in existing_tickets:
+        ticket_id = ticket["id"]
+        number = int(ticket_id[1:])
+
+        if number > highest:
+            highest = number
+
+    new_number = highest + 1
+
+    return f"T{new_number:03d}"
+
+
+def create_ticket(tickets, title, category, urgency, affected_users):
+    clean_title = check_title(title)
+    clean_category = check_category(category)
+    clean_urgency = check_urgency(urgency)
+    clean_users = check_affected_users(affected_users)
+
+    priority = calculate_priority(clean_urgency, clean_users)
+    new_id = next_id(tickets)
+
+    ticket = {
+        "id": new_id,
+        "title": clean_title,
+        "category": clean_category,
+        "urgency": clean_urgency,
+        "affected_users": clean_users,
+        "priority": priority,
+        "status": "open",
+        "assigned_to": None
+    }
+
+    tickets.append(ticket)
+
+    return ticket
+
+def find_ticket(tickets, ticket_id):
+    ticket_id = ticket_id.strip().upper()
+
+    for ticket in tickets:
+        if ticket["id"] == ticket_id:
+            return ticket
+
+    raise ValueError("Ticket not found")
+
 
 
     
