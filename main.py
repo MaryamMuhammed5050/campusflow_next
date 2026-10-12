@@ -57,3 +57,33 @@ except ValueError as error:
 
 except StorageError as error:
     print(error)
+    
+
+def handle_create(tickets):
+    title = input("Title: ")
+    category = input("Category (Network/Hardware/Software/Other): ")
+    urgency = input("Urgency (low/medium/high): ")
+    affected_users = input("Number of affected users: ")
+
+    try:
+        ticket = create_ticket(
+            tickets,
+            title,
+            category,
+            urgency,
+            affected_users
+        )
+    except ValueError as error:
+        print(f"Error: {error}")
+        return
+
+    try:
+        save_tickets(tickets)
+    except StorageError as error:
+        print(f"Error: {error}")
+        return
+
+    print(
+        f"Created ticket {ticket['id']} "
+        f"with priority {ticket['priority']}"
+    )
