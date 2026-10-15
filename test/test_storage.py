@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from campusflow.storage import load_tickets, save_tickets, StorageError
+from campusflow.tickets import create_ticket
 
 
 def sample_ticket():
@@ -359,6 +360,62 @@ class TestSaveTickets(unittest.TestCase):
                 save_tickets(invalid, path)
 
             self.assertEqual(load_tickets(path), original)
+
+    def test_ticket_id_continues_after_restart(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "tickets.json"
+
+            tickets = []
+
+            create_ticket(
+                tickets,
+                "WiFi issue",
+                "Network",
+                "high",
+                10
+            )
+
+            create_ticket(
+                tickets,
+                "Broken laptop",
+                "Hardware",
+                "low",
+                2
+            )
+
+            create_ticket(
+                tickets,
+                "Software error",
+                "Software",
+                "medium",
+                5
+            )
+
+            self.assertEqual(len(tickets), 3)
+
+            save_tickets(tickets, path)
+
+            loaded_tickets = load_tickets(path)
+
+            self.assertEqual(len(loaded_tickets), 3)
+
+            new_ticket = create_ticket(
+                loaded_tickets,
+                "Printer not working",
+                "Hardware",
+                "low",
+                1
+            )
+
+            self.assertEqual(new_ticket["id"], "T004")
+            self.assertEqual(len(loaded_tickets), 4)
+
+            save_tickets(loaded_tickets, path)
+
+            restarted_tickets = load_tickets(path)
+
+            self.assertEqual(len(restarted_tickets), 4)
+            self.assertEqual(restarted_tickets[-1]["id"], "T004")
 
 
 if __name__ == "__main__":
