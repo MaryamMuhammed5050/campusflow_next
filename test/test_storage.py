@@ -1,4 +1,3 @@
-
 import json
 import tempfile
 import unittest
@@ -6,6 +5,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from campusflow.storage import load_tickets, save_tickets, StorageError
+from campusflow.tickets import create_ticket
 
 
 def sample_ticket():
@@ -53,6 +53,7 @@ class TestLoadTickets(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "tickets.json"
             corrupted_text = '{"id": "T001", invalid JSON'
+
             path.write_text(corrupted_text, encoding="utf-8")
 
             with self.assertRaisesRegex(
@@ -60,7 +61,6 @@ class TestLoadTickets(unittest.TestCase):
             ):
                 load_tickets(path)
 
-            # The corrupted file must remain unchanged.
             self.assertEqual(
                 path.read_text(encoding="utf-8"),
                 corrupted_text
@@ -69,7 +69,11 @@ class TestLoadTickets(unittest.TestCase):
     def test_non_list_json_raises_storage_error(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "tickets.json"
-            path.write_text('{"id": "T001"}', encoding="utf-8")
+
+            path.write_text(
+                '{"id": "T001"}',
+                encoding="utf-8"
+            )
 
             with self.assertRaisesRegex(
                 StorageError, "Ticket file has the wrong format"
@@ -79,6 +83,7 @@ class TestLoadTickets(unittest.TestCase):
     def test_non_dictionary_ticket_raises_storage_error(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "tickets.json"
+
             path.write_text(
                 json.dumps(["not a ticket"]),
                 encoding="utf-8"
@@ -92,19 +97,24 @@ class TestLoadTickets(unittest.TestCase):
     def test_missing_required_field_raises_storage_error(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "tickets.json"
+
             ticket = sample_ticket()
             del ticket["title"]
 
-            path.write_text(json.dumps([ticket]), encoding="utf-8")
+            path.write_text(
+                json.dumps([ticket]),
+                encoding="utf-8"
+            )
 
             with self.assertRaisesRegex(
-                StorageError, "A ticket is missing field: "
+                StorageError, "A ticket is missing field:"
             ):
                 load_tickets(path)
 
     def test_read_failure_raises_storage_error(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "tickets.json"
+
             path.write_text("[]", encoding="utf-8")
 
             with patch(
@@ -115,6 +125,121 @@ class TestLoadTickets(unittest.TestCase):
                     StorageError, "Could not read the file"
                 ):
                     load_tickets(path)
+
+    def test_rejects_duplicate_ticket_ids(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "tickets.json"
+
+            tickets = [
+                sample_ticket(),
+                sample_ticket()
+            ]
+
+            path.write_text(
+                json.dumps(tickets),
+                encoding="utf-8"
+            )
+
+            with self.assertRaisesRegex(
+                StorageError, "Duplicate ticket ID"
+            ):
+                load_tickets(path)
+
+    def test_rejects_invalid_priority(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "tickets.json"
+
+            ticket = sample_ticket()
+            ticket["priority"] = "low"
+
+            path.write_text(
+                json.dumps([ticket]),
+                encoding="utf-8"
+            )
+
+            with self.assertRaisesRegex(
+                StorageError, "Invalid ticket priority"
+            ):
+                load_tickets(path)
+
+    def test_rejects_invalid_ticket_id(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "tickets.json"
+
+            ticket = sample_ticket()
+            ticket["id"] = "INVALID"
+
+            path.write_text(
+                json.dumps([ticket]),
+                encoding="utf-8"
+            )
+
+            with self.assertRaisesRegex(
+                StorageError, "Invalid ticket ID"
+            ):
+                load_tickets(path)
+
+    def test_rejects_invalid_notes(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "tickets.json"
+
+            ticket = sample_ticket()
+            ticket["notes"] = "invalid"
+
+            path.write_text(
+                json.dumps([ticket]),
+                encoding="utf-8"
+            )
+
+            with self.assertRaisesRegex(
+                StorageError, "Invalid notes format"
+            ):
+                load_tickets(path)
+
+    def test_loads_old_ticket_without_notes(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "tickets.json"
+
+            ticket = sample_ticket()
+
+            path.write_text(
+                json.dumps([ticket]),
+                encoding="utf-8"
+            )
+
+            result = load_tickets(path)
+
+            self.assertEqual(result, [ticket])
+            self.assertEqual(result[0].get("notes", []), [])
+
+    def test_rejects_duplicate_note_ids(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "tickets.json"
+
+            ticket = sample_ticket()
+
+            ticket["notes"] = [
+                {
+                    "note_id": "N001",
+                    "author": "Monday",
+                    "message": "Checking the network"
+                },
+                {
+                    "note_id": "N001",
+                    "author": "Ada",
+                    "message": "Investigating the issue"
+                }
+            ]
+
+            path.write_text(
+                json.dumps([ticket]),
+                encoding="utf-8"
+            )
+
+            with self.assertRaisesRegex(
+                StorageError, "Duplicate note ID"
+            ):
+                load_tickets(path)
 
 
 class TestSaveTickets(unittest.TestCase):
@@ -139,6 +264,7 @@ class TestSaveTickets(unittest.TestCase):
             save_tickets([sample_ticket()], path)
 
             self.assertTrue(path.exists())
+
             self.assertEqual(
                 json.loads(path.read_text(encoding="utf-8")),
                 [sample_ticket()]
@@ -158,9 +284,11 @@ class TestSaveTickets(unittest.TestCase):
     def test_replaces_existing_file(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "tickets.json"
+
             path.write_text("[]", encoding="utf-8")
 
             tickets = [sample_ticket()]
+
             save_tickets(tickets, path)
 
             self.assertEqual(
@@ -172,13 +300,15 @@ class TestSaveTickets(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "tickets.json"
 
-            # A set cannot be converted to JSON.
-            invalid_tickets = [{"invalid": {1, 2, 3}}]
+            ticket = sample_ticket()
+            ticket["unexpected"] = {1, 2, 3}
 
             with self.assertRaisesRegex(
                 StorageError, "Could not save tickets"
             ):
-                save_tickets(invalid_tickets, path)
+                save_tickets([ticket], path)
+
+            self.assertFalse(path.exists())
 
     def test_temporary_file_is_removed_after_success(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -189,6 +319,103 @@ class TestSaveTickets(unittest.TestCase):
 
             self.assertTrue(path.exists())
             self.assertFalse(temp_path.exists())
+
+    def test_saves_and_loads_notes(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "tickets.json"
+
+            ticket = sample_ticket()
+
+            ticket["notes"] = [
+                {
+                    "note_id": "N001",
+                    "author": "Monday",
+                    "message": "Investigating the network"
+                }
+            ]
+
+            save_tickets([ticket], path)
+
+            loaded = load_tickets(path)
+
+            self.assertEqual(loaded, [ticket])
+
+            self.assertEqual(
+                loaded[0]["notes"][0]["note_id"],
+                "N001"
+            )
+
+    def test_invalid_data_does_not_overwrite_file(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "tickets.json"
+
+            original = [sample_ticket()]
+
+            save_tickets(original, path)
+
+            invalid = [sample_ticket()]
+            invalid[0]["affected_users"] = -5
+
+            with self.assertRaises(StorageError):
+                save_tickets(invalid, path)
+
+            self.assertEqual(load_tickets(path), original)
+
+    def test_ticket_id_continues_after_restart(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "tickets.json"
+
+            tickets = []
+
+            create_ticket(
+                tickets,
+                "WiFi issue",
+                "Network",
+                "high",
+                10
+            )
+
+            create_ticket(
+                tickets,
+                "Broken laptop",
+                "Hardware",
+                "low",
+                2
+            )
+
+            create_ticket(
+                tickets,
+                "Software error",
+                "Software",
+                "medium",
+                5
+            )
+
+            self.assertEqual(len(tickets), 3)
+
+            save_tickets(tickets, path)
+
+            loaded_tickets = load_tickets(path)
+
+            self.assertEqual(len(loaded_tickets), 3)
+
+            new_ticket = create_ticket(
+                loaded_tickets,
+                "Printer not working",
+                "Hardware",
+                "low",
+                1
+            )
+
+            self.assertEqual(new_ticket["id"], "T004")
+            self.assertEqual(len(loaded_tickets), 4)
+
+            save_tickets(loaded_tickets, path)
+
+            restarted_tickets = load_tickets(path)
+
+            self.assertEqual(len(restarted_tickets), 4)
+            self.assertEqual(restarted_tickets[-1]["id"], "T004")
 
 
 if __name__ == "__main__":
