@@ -1,4 +1,3 @@
-
 import unittest
 
 from campusflow.tickets import (
@@ -66,7 +65,9 @@ class TestCheckUrgency(unittest.TestCase):
             check_urgency(123)
 
     def test_rejects_invalid_urgency(self):
-        with self.assertRaisesRegex(ValueError, "Urgency must be low, medium or high"):
+        with self.assertRaisesRegex(
+            ValueError, "Urgency must be low, medium or high"
+        ):
             check_urgency("urgent")
 
 
@@ -75,11 +76,13 @@ class TestCheckAffectedUsers(unittest.TestCase):
     def test_accepts_integer(self):
         self.assertEqual(check_affected_users(5), 5)
 
-    def test_converts_numeric_text(self):
-        self.assertEqual(check_affected_users("12"), 12)
+    def test_rejects_numeric_text(self):
+        with self.assertRaises(ValueError):
+            check_affected_users("12")
 
-    def test_removes_spaces_from_text(self):
-        self.assertEqual(check_affected_users(" 5 "), 5)
+    def test_rejects_spaced_numeric_text(self):
+        with self.assertRaises(ValueError):
+            check_affected_users(" 5 ")
 
     def test_rejects_boolean(self):
         for value in [True, False]:
@@ -139,6 +142,7 @@ class TestNextId(unittest.TestCase):
             {"id": "T002"},
             {"id": "T003"}
         ]
+
         self.assertEqual(next_id(tickets), "T004")
 
     def test_uses_highest_id(self):
@@ -147,6 +151,7 @@ class TestNextId(unittest.TestCase):
             {"id": "T010"},
             {"id": "T005"}
         ]
+
         self.assertEqual(next_id(tickets), "T011")
 
 
@@ -161,7 +166,7 @@ class TestCreateTicket(unittest.TestCase):
             " Network is down ",
             "network",
             "HIGH",
-            "12"
+            12
         )
 
         self.assertEqual(ticket, {
@@ -172,7 +177,8 @@ class TestCreateTicket(unittest.TestCase):
             "affected_users": 12,
             "priority": "critical",
             "status": "open",
-            "assigned_to": None
+            "assigned_to": None,
+            "notes": []
         })
 
         self.assertEqual(len(self.tickets), 1)
@@ -182,6 +188,7 @@ class TestCreateTicket(unittest.TestCase):
         first = create_ticket(
             self.tickets, "First issue", "Network", "low", 1
         )
+
         second = create_ticket(
             self.tickets, "Second issue", "Hardware", "medium", 3
         )
@@ -223,6 +230,21 @@ class TestCreateTicket(unittest.TestCase):
 
         self.assertEqual(self.tickets, [])
 
+    def test_numeric_string_does_not_create_ticket(self):
+        with self.assertRaises(ValueError):
+            create_ticket(
+                self.tickets, "Network issue", "Network", "high", "10"
+            )
+
+        self.assertEqual(self.tickets, [])
+
+    def test_new_ticket_has_empty_notes(self):
+        ticket = create_ticket(
+            self.tickets, "Printer issue", "Hardware", "low", 2
+        )
+
+        self.assertEqual(ticket["notes"], [])
+
 
 class TestFindTicket(unittest.TestCase):
 
@@ -253,6 +275,10 @@ class TestFindTicket(unittest.TestCase):
     def test_rejects_missing_ticket(self):
         with self.assertRaisesRegex(ValueError, "Ticket not found"):
             find_ticket(self.tickets, "T999")
+
+    def test_rejects_invalid_ticket_id_type(self):
+        with self.assertRaises(ValueError):
+            find_ticket(self.tickets, 123)
 
 
 if __name__ == "__main__":
