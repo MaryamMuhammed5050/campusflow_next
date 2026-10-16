@@ -12,6 +12,8 @@ from main import (
     handle_work_queue,
     show_ticket,
     display_menu,
+    handle_search,
+    choose_option,
 )
 
 
@@ -130,6 +132,15 @@ class TestCLI(unittest.TestCase):
                 display_menu()
 
             self.assertIn("8. Add note", output.getvalue())
+    
+    def test_menu_contains_search(self):
+        with io.StringIO() as output:
+            with redirect_stdout(output):
+                display_menu()
+
+            result = output.getvalue()
+
+        self.assertIn("9. Search tickets", result)
 
     def create_sample_ticket(self):
         from campusflow.tickets import create_ticket
@@ -141,6 +152,80 @@ class TestCLI(unittest.TestCase):
             "high",
             12
         )
+
+
+    def test_choose_option(self):
+        with patch("builtins.input", return_value="1"):
+            result = choose_option(
+                "Category",
+                ["Network", "Hardware", "Software", "Other"],
+            )
+
+        self.assertEqual(result, "Network")
+
+
+    def test_choose_option_any(self):
+        with patch("builtins.input", return_value="0"):
+            result = choose_option(
+                "Category",
+                ["Network", "Hardware", "Software", "Other"],
+            )
+
+        self.assertEqual(result, "")
+
+
+    def test_choose_option_retries_invalid_choice(self):
+        with patch(
+            "builtins.input",
+            side_effect=["9", "1"],
+        ):
+            result = choose_option(
+                "Category",
+                ["Network", "Hardware", "Software", "Other"],
+            )
+
+        self.assertEqual(result, "Network")
+
+
+    def test_search_tickets_from_cli(self):
+        self.create_sample_ticket()
+
+        inputs = [
+            "Network",
+            "1",
+            "0",
+            "0",
+        ]
+
+        with patch("builtins.input", side_effect=inputs):
+            with io.StringIO() as output:
+                with redirect_stdout(output):
+                    handle_search(self.tickets)
+
+                result = output.getvalue()
+
+        self.assertIn("Found 1 matching ticket(s)", result)
+        self.assertIn("T001", result)
+
+
+    def test_search_no_results(self):
+        self.create_sample_ticket()
+
+        inputs = [
+            "printer",
+            "0",
+            "0",
+            "0",
+        ]
+
+        with patch("builtins.input", side_effect=inputs):
+            with io.StringIO() as output:
+                with redirect_stdout(output):
+                    handle_search(self.tickets)
+
+                result = output.getvalue()
+
+        self.assertIn("No matching tickets found.", result)
 
 
 if __name__ == "__main__":

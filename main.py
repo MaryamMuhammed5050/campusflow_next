@@ -5,6 +5,7 @@ from campusflow.workflow import (
     get_work_queue,
 )
 from campusflow.notes import add_note
+from campusflow.search import search_tickets
 from campusflow.reports import generate_report, format_report_text
 from campusflow.storage import load_tickets, save_tickets, StorageError
 
@@ -183,6 +184,66 @@ def handle_report(tickets):
     print(format_report_text(report_data))
 
 
+def choose_option(title, options):
+    while True:
+        print(f"\n{title}:")
+        print("0. Any")
+
+        for number, value in enumerate(options, start=1):
+            display_name = value.replace("_", " ").title()
+            print(f"{number}. {display_name}")
+
+        choice = input(f"Choose {title.lower()}: ").strip()
+
+        if choice == "0":
+            return ""
+
+        if choice.isdigit():
+            number = int(choice)
+
+            if 1 <= number <= len(options):
+                return options[number - 1]
+
+        print("Invalid choice. Please try again.")
+
+
+def handle_search(tickets):
+    print("\n=== SEARCH TICKETS ===")
+
+    title = input(
+        "Title contains (press Enter for any): "
+    ).strip()
+
+    category = choose_option(
+        "Category",
+        ["Network", "Hardware", "Software", "Other"],
+    )
+
+    status = choose_option(
+        "Status",
+        ["open", "in_progress", "resolved"],
+    )
+
+    priority = choose_option(
+        "Priority",
+        ["critical", "high", "medium", "low"],
+    )
+
+    results = search_tickets(
+        tickets,
+        title=title,
+        category=category,
+        status=status,
+        priority=priority,
+    )
+
+    if not results:
+        print("\nNo matching tickets found.")
+        return
+
+    print(f"\nFound {len(results)} matching ticket(s):")
+    show_ticket_list(results)
+
 def display_menu():
     print("\n=== CAMPUSFLOW TICKET SYSTEM ===")
     print("1. Create ticket")
@@ -193,6 +254,7 @@ def display_menu():
     print("6. View work queue")
     print("7. Generate report")
     print("8. Add note")
+    print("9. Search tickets")
     print("0. Exit")
 
 
@@ -238,6 +300,9 @@ def main():
 
         elif choice == "8":
             handle_add_note(tickets)
+
+        elif choice == "9":
+            handle_search(tickets)
 
         elif choice == "0":
             print("Goodbye!")
