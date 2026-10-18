@@ -47,7 +47,7 @@ class TestWorkflow(unittest.TestCase):
 
         self.assertIsNone(self.tickets[0]["assigned_to"])
 
-    def test_work_queue_only_contains_open_tickets(self):
+    def test_work_queue_contains_unresolved_tickets(self):
         self.tickets.append({
             "id": "T002",
             "status": "in_progress",
@@ -55,7 +55,15 @@ class TestWorkflow(unittest.TestCase):
             "priority": "critical"
         })
 
+        self.tickets.append({
+            "id": "T003",
+            "status": "resolved",
+            "assigned_to": "Mary",
+            "priority": "critical"
+        })
+
         queue = get_work_queue(self.tickets)
 
-        self.assertEqual(len(queue), 1)
+        self.assertEqual(len(queue), 2)
         self.assertEqual(queue[0]["id"], "T001")
+        self.assertEqual(queue[1]["id"], "T002")
