@@ -1,28 +1,30 @@
 def search_by_title(tickets, search_term):
     results = []
 
-    search_term = search_term.strip().lower()
+    search_term = search_term.strip().casefold()
 
     for ticket in tickets:
-        title = ticket["title"].lower()
+        title = ticket["title"].casefold()
 
         if search_term in title:
             results.append(ticket)
 
     return results
 
+
 def filter_by_category(tickets, category):
     results = []
 
-    category = category.strip().lower()
+    category = category.strip().casefold()
 
     for ticket in tickets:
-        ticket_category = ticket["category"].lower()
+        ticket_category = ticket["category"].casefold()
 
         if ticket_category == category:
             results.append(ticket)
 
     return results
+
 
 def search_tickets(
     tickets,
@@ -33,23 +35,22 @@ def search_tickets(
 ):
     results = []
 
-    title = title.strip().lower()
-    category = category.strip().lower()
-    status = status.strip().lower()
-    priority = priority.strip().lower()
+    title = title.strip().casefold()
+    category = category.strip().casefold()
+    status = status.strip().casefold()
+    priority = priority.strip().casefold()
 
     for ticket in tickets:
-
-        if title and title not in ticket["title"].lower():
+        if title and title not in ticket["title"].casefold():
             continue
 
-        if category and category != ticket["category"].lower():
+        if category and category != ticket["category"].casefold():
             continue
 
-        if status and status != ticket["status"].lower():
+        if status and status != ticket["status"].casefold():
             continue
 
-        if priority and priority != ticket["priority"].lower():
+        if priority and priority != ticket["priority"].casefold():
             continue
 
         results.append(ticket)

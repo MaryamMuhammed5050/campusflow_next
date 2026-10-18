@@ -47,7 +47,7 @@ class TestWorkflow(unittest.TestCase):
 
         self.assertIsNone(self.tickets[0]["assigned_to"])
 
-    def test_work_queue_contains_unresolved_tickets(self):
+    def test_work_queue_only_contains_open_tickets(self):
         self.tickets.append({
             "id": "T002",
             "status": "in_progress",
@@ -64,6 +64,41 @@ class TestWorkflow(unittest.TestCase):
 
         queue = get_work_queue(self.tickets)
 
-        self.assertEqual(len(queue), 2)
+        self.assertEqual(len(queue), 1)
         self.assertEqual(queue[0]["id"], "T001")
-        self.assertEqual(queue[1]["id"], "T002")
+
+    def test_work_queue_sorts_by_priority_then_numeric_id(self):
+        tickets = [
+            {
+                "id": "T010",
+                "status": "open",
+                "priority": "high"
+            },
+            {
+                "id": "T003",
+                "status": "open",
+                "priority": "critical"
+            },
+            {
+                "id": "T002",
+                "status": "open",
+                "priority": "high"
+            },
+            {
+                "id": "T001",
+                "status": "open",
+                "priority": "medium"
+            },
+            {
+                "id": "T005",
+                "status": "open",
+                "priority": "low"
+            }
+        ]
+        
+        queue = get_work_queue(tickets)
+
+        self.assertEqual(
+            [ticket["id"] for ticket in queue],
+            ["T003", "T002", "T010", "T001", "T005"]
+        )

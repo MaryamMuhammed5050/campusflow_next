@@ -227,6 +227,6 @@ class TestCLI(unittest.TestCase):
 
         self.assertIn("No matching tickets found.", result)
 
-
+    
 if __name__ == "__main__":
     unittest.main()

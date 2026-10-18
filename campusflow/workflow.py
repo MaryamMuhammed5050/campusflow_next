@@ -68,15 +68,14 @@ def update_status(tickets, ticket_id, new_status):
     return ticket
 
 def get_work_queue(tickets):
-    unresolved = [
+    open_tickets = [
         ticket for ticket in tickets
-        if ticket.get("status") in ("open", "in_progress")
+        if ticket.get("status") == "open"
     ]
 
     return sorted(
-        unresolved,
+        open_tickets,
         key=lambda ticket: (
-            STATUS_ORDER.get(ticket.get("status"), 3),
             PRIORITY_WEIGHTS.get(ticket.get("priority"), 4),
             _parse_ticket_number(ticket.get("id", ""))
         )
