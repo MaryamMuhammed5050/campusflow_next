@@ -280,7 +280,7 @@ def display_menu():
     print("5. Update ticket status")
     print("6. View work queue")
     print("7. Generate report")
-    print("8. Add note")
+    print("8. Add follow-up note")
     print("9. Search tickets")
     print("10. Engineering understanding check")
     print("11. View ticket notes")

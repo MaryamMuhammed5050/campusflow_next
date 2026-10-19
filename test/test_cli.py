@@ -9,6 +9,7 @@ from main import (
     handle_assign,
     handle_update_status,
     handle_add_note,
+    handle_view_notes,
     handle_work_queue,
     show_ticket,
     display_menu,
@@ -108,6 +109,41 @@ class TestCLI(unittest.TestCase):
             "N001"
         )
 
+    
+    def test_view_ticket_notes(self):
+        self.create_sample_ticket()
+
+        self.tickets[0]["notes"] = [
+            {
+                "note_id": "N001",
+                "author": "Monday",
+                "message": "Router reboot attempted"
+            }
+        ]
+
+        with patch("builtins.input", return_value="T001"):
+            with io.StringIO() as output:
+                with redirect_stdout(output):
+                    handle_view_notes(self.tickets)
+
+                self.assertIn(
+                    "N001 | Monday | Router reboot attempted",
+                    output.getvalue()
+                )
+
+    def test_view_ticket_notes_when_empty(self):
+        self.create_sample_ticket()
+
+        with patch("builtins.input", return_value="T001"):
+            with io.StringIO() as output:
+                with redirect_stdout(output):
+                    handle_view_notes(self.tickets)
+
+                self.assertIn(
+                    "No notes found for this ticket.",
+                    output.getvalue()
+                )
+
     def test_work_queue(self):
         self.create_sample_ticket()
 
@@ -131,8 +167,8 @@ class TestCLI(unittest.TestCase):
             with redirect_stdout(output):
                 display_menu()
 
-            self.assertIn("8. Add note", output.getvalue())
-    
+            self.assertIn("8. Add follow-up note", output.getvalue())
+
     def test_menu_contains_search(self):
         with io.StringIO() as output:
             with redirect_stdout(output):
@@ -141,6 +177,17 @@ class TestCLI(unittest.TestCase):
             result = output.getvalue()
 
         self.assertIn("9. Search tickets", result)
+
+    def test_menu_contains_view_notes(self):
+        with io.StringIO() as output:
+            with redirect_stdout(output):
+                display_menu()
+
+            self.assertIn(
+                "11. View ticket notes",
+                output.getvalue()
+            )
+
 
     def create_sample_ticket(self):
         from campusflow.tickets import create_ticket
