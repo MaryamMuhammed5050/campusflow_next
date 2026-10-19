@@ -5,9 +5,10 @@ from campusflow.workflow import (
     get_work_queue,
 )
 from campusflow.notes import add_note
+from campusflow.search import search_tickets
 from campusflow.reports import generate_report, format_report_text
 from campusflow.storage import load_tickets, save_tickets, StorageError
-
+from campusflow.understanding_check import run_understanding_check
 
 def show_ticket(ticket):
     print(f"ID: {ticket['id']}")
@@ -141,6 +142,33 @@ def handle_update_status(tickets):
     )
 
 
+def handle_view_notes(tickets):
+    print("\n=== VIEW TICKET NOTES ===")
+
+    ticket_id = input("Enter ticket ID: ").strip()
+
+    try:
+        ticket = find_ticket(tickets, ticket_id)
+    except ValueError as error:
+        print(error)
+        return
+
+    notes = ticket.get("notes", [])
+
+    if not notes:
+        print("No notes found for this ticket.")
+        return
+
+    print(f"\nNotes for {ticket['id']}:")
+
+    for note in notes:
+        print(
+            f"{note['note_id']} | "
+            f"{note['author']} | "
+            f"{note['message']}"
+        )
+
+
 def handle_add_note(tickets):
     ticket_id = input("Enter ticket ID: ").strip()
     author = input("Enter your name: ")
@@ -183,6 +211,66 @@ def handle_report(tickets):
     print(format_report_text(report_data))
 
 
+def choose_option(title, options):
+    while True:
+        print(f"\n{title}:")
+        print("0. Any")
+
+        for number, value in enumerate(options, start=1):
+            display_name = value.replace("_", " ").title()
+            print(f"{number}. {display_name}")
+
+        choice = input(f"Choose {title.lower()}: ").strip()
+
+        if choice == "0":
+            return ""
+
+        if choice.isdigit():
+            number = int(choice)
+
+            if 1 <= number <= len(options):
+                return options[number - 1]
+
+        print("Invalid choice. Please try again.")
+
+
+def handle_search(tickets):
+    print("\n=== SEARCH TICKETS ===")
+
+    title = input(
+        "Title contains (press Enter for any): "
+    ).strip()
+
+    category = choose_option(
+        "Category",
+        ["Network", "Hardware", "Software", "Other"],
+    )
+
+    status = choose_option(
+        "Status",
+        ["open", "in_progress", "resolved"],
+    )
+
+    priority = choose_option(
+        "Priority",
+        ["critical", "high", "medium", "low"],
+    )
+
+    results = search_tickets(
+        tickets,
+        title=title,
+        category=category,
+        status=status,
+        priority=priority,
+    )
+
+    if not results:
+        print("\nNo matching tickets found.")
+        return
+
+    print(f"\nFound {len(results)} matching ticket(s):")
+    show_ticket_list(results)
+
 def display_menu():
     print("\n=== CAMPUSFLOW TICKET SYSTEM ===")
     print("1. Create ticket")
@@ -192,7 +280,10 @@ def display_menu():
     print("5. Update ticket status")
     print("6. View work queue")
     print("7. Generate report")
-    print("8. Add note")
+    print("8. Add follow-up note")
+    print("9. Search tickets")
+    print("10. Engineering understanding check")
+    print("11. View ticket notes")
     print("0. Exit")
 
 
@@ -238,6 +329,15 @@ def main():
 
         elif choice == "8":
             handle_add_note(tickets)
+
+        elif choice == "9":
+            handle_search(tickets)
+
+        elif choice == "10":
+            run_understanding_check()
+        
+        elif choice == "11":
+            handle_view_notes(tickets)
 
         elif choice == "0":
             print("Goodbye!")

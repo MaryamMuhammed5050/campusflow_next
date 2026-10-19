@@ -76,10 +76,12 @@ def get_work_queue(tickets):
     return sorted(
         open_tickets,
         key=lambda ticket: (
-            PRIORITY_WEIGHTS.get(ticket["priority"], 4),
-            _parse_ticket_number(ticket["id"])
+            PRIORITY_WEIGHTS.get(ticket.get("priority"), 4),
+            _parse_ticket_number(ticket.get("id", ""))
         )
     )
+
+
     # def sort_key(t):
     #     priority = str(t.get("priority", "low")).lower()
     #     p_weight = PRIORITY_WEIGHTS.get(priority, 4)
