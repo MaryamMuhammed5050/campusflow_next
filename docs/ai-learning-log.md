@@ -100,3 +100,43 @@ I rejected the original suggestion and restored the queue to filter only tickets
 **Regression protection**
 
 The workflow tests verify that non-open tickets are excluded and that open tickets are ordered according to the required priority and numeric-ID rules.
+
+## 8. Engineer B Bug-Hunter Test
+
+### Test Name
+
+`test_note_id_continues_after_restart`
+
+### Module Tested
+
+Engineer A's storage and note persistence functionality.
+
+### Initial State
+
+Ticket `T001` contained an existing note with the ID `N001`. The ticket and its note were saved to JSON storage.
+
+### Action / Input
+
+I reloaded the ticket data from storage and then added another note to `T001`.
+
+### Expected Result
+
+The existing `N001` note should remain after the restart, and the newly added note should receive the next sequential ID, `N002`.
+
+### Actual Result
+
+The reloaded ticket retained its existing note, and the new note received the ID `N002`. The storage test suite passed all 24 tests.
+
+### Code Change Required
+
+No production-code change was required. Engineer A's implementation already preserved note IDs correctly across save and reload operations.
+
+### Final Verification
+
+After adding the bug-hunter test and cleaning the duplicated workflow tests, I ran the complete automated test suite.
+
+Result:
+
+`Ran 126 tests in 0.127s — OK`
+
+This confirmed that the additional test did not introduce regressions and that the integrated CampusFlow system remained functional.
