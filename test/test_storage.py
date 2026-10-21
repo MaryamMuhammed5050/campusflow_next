@@ -3,6 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+from campusflow.notes import add_note
 
 from campusflow.storage import load_tickets, save_tickets, StorageError
 from campusflow.tickets import create_ticket
@@ -417,6 +418,46 @@ class TestSaveTickets(unittest.TestCase):
             self.assertEqual(len(restarted_tickets), 4)
             self.assertEqual(restarted_tickets[-1]["id"], "T004")
 
+
+    def test_note_id_continues_after_restart(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "tickets.json"
+
+            tickets = [
+                {
+                    "id": "T001",
+                    "title": "Network failure",
+                    "category": "Network",
+                    "urgency": "high",
+                    "affected_users": 12,
+                    "priority": "critical",
+                    "status": "open",
+                    "assigned_to": None,
+                    "notes": [
+                        {
+                            "note_id": "N001",
+                            "author": "Monday",
+                            "message": "Initial investigation completed"
+                        }
+                    ]
+                }
+            ]
+
+            save_tickets(tickets, path)
+            loaded_tickets = load_tickets(path)
+
+            note = add_note(
+                loaded_tickets,
+                "T001",
+                "Monday",
+                "Checking the router again"
+            )
+
+            self.assertEqual(note["note_id"], "N002")
+            self.assertEqual(
+                len(loaded_tickets[0]["notes"]),
+                2
+            )
 
 if __name__ == "__main__":
     unittest.main()
